@@ -71,3 +71,4 @@ new_embeddings[-len(fim_tokens):] = new_token_embeddings
 # Update the model's embeddings with the new embeddings
 embeddings.weight = torch.nn.Parameter(new_embeddings)
 model.set_input_embeddings(embeddings)
+
