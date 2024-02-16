@@ -233,6 +233,22 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         self.backbone.embedding = new_embeddings
         self.tie_weights()
 
+    def resize_token_embeddings(self, vocab_size):
+        old_embeddings = self.backbone.embedding
+        old_num_tokens, old_embedding_dim = old_embeddings.weight.size()
+        new_embeddings = nn.Embedding(
+            vocab_size,
+            old_embedding_dim,
+            device=old_embeddings.weight.device,
+            dtype=old_embeddings.weight.dtype,
+        )
+        nn.init.normal_(new_embeddings.weight, std=0.02)
+        n = min(old_num_tokens, vocab_size)
+        new_embeddings.weight.data[:n, :] = old_embeddings.weight.data[:n, :]
+        self.backbone.embedding = new_embeddings
+
+        self.tie_weights()
+
     def forward(self, input_ids, position_ids=None, inference_params=None, num_last_tokens=0):
         """
         Changing this function from the original Mamba implementation to make it work
