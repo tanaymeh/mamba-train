@@ -1,7 +1,8 @@
+import random
 import numpy as np
 
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, Sampler
 
 import lance
 
@@ -92,3 +93,23 @@ class MambaDataset(Dataset):
         tokens = sample[0:self.context_len]
         labels = sample[1:self.context_len+1]
         return {'tokens': tokens, 'labels': labels}
+    
+
+class MambaSampler(Sampler):
+    r"""Samples tokens randomly but `k` indices apart where `k` is generally the context length of the LLM.
+
+    Args:
+        data_source (Dataset): dataset to sample from
+        k (int): minimum index distance between each random sample
+    """
+
+    def __init__(self, data_source, k=16):
+        self.data_source = data_source
+        self.available_indices = list(range(0, self.num_samples, k))
+        random.shuffle(self.available_indices)
+
+    def __iter__(self):
+        yield from self.available_indices
+
+    def __len__(self) -> int:
+        return len(self.available_indices)
