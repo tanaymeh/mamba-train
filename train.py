@@ -16,8 +16,11 @@ from tqdm.auto import tqdm
 
 from data import MambaDataset, MambaSampler
 
+import wandb
+
 # Params (replace with Arg parser later)
 class Args:
+    wandb = False
     tokenizer_model = "EleutherAI/gpt-neox-20b"
     model_name = "state-spaces/mamba-790m"
     dataset_path = "/teamspace/studios/codeparrot-dataset-lance/code_parrot_github_python.lance"
@@ -128,6 +131,30 @@ print(f"Epochs to train: {Args.epochs}")
 print(f"Training steps per epoch: {Args.steps_per_epoch:,}\n")
 # print(f"Total training steps in training: {Args.steps_per_epoch * Args.epochs:,}")
 
+def wandb_log(**kwargs):
+    """Easy interface to log stuff to wandb"""
+    for k, v in kwargs.items():
+        wandb.log({k: v})
+
+if Args.wandb:
+    # Convert the Config class to a dict for logging
+    config_dict = dict(vars(Args))
+    del[config_dict['__module__']]
+    del[config_dict['__dict__']]
+    del[config_dict['__weakref__']]
+    del[config_dict['__doc__']]
+
+    from dotenv import load_dotenv
+    load_dotenv()
+    wandb.login()
+    run = wandb.init(
+        project='pytorch',
+        config=config_dict,
+        group='mamba-train',
+        job_type='train',
+    )
+    wandb.watch(model)
+
 prog_bar = tqdm(range(Args.steps_per_epoch * Args.epochs), total=Args.steps_per_epoch * Args.epochs)
 for epoch in range(Args.epochs):
     model.train()
@@ -155,6 +182,8 @@ for epoch in range(Args.epochs):
         prog_bar.update(1)
 
         total_loss.append(loss.item())
+        if Args.wandb:
+            wandb_log(step_loss=loss.item())
 
     # Calculate perplexity for the epoch
     try:
@@ -162,6 +191,9 @@ for epoch in range(Args.epochs):
     except OverflowError:
         perplexity = float('-inf')
     
+    if Args.wandb:
+        wandb_log(train_perplexity=perplexity)
+
     print(f"epoch: {epoch} | train perplexity: {perplexity:.4f}")
 
 # Save the model after training

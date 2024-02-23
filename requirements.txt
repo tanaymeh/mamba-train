@@ -5,3 +5,4 @@ mamba-ssm
 numpy
 torch
 transformers
+wandb

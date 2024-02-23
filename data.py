@@ -6,6 +6,38 @@ from torch.utils.data import Dataset, Sampler
 
 import lance
 
+def apply_fim(sample, fim_prefix, fim_middle, fim_suffix, fim_pad, mode, np_rng):
+    """
+    Applies FIM transformation on one sample
+    """
+    boundaries = sorted(np_rng.randint(low=0, high=len(sample)+1, size=2))
+
+    prefix = sample[: boundaries[0]]
+    middle = sample[boundaries[0] : boundaries[1]]
+    suffix = sample[boundaries[1] :]
+
+    total_length = len(prefix) + len(middle) + len(suffix) + 3
+    diff = total_length - len(sample)
+    if diff > 0:
+        suffix = suffix[: max(0, len(suffix) - diff)]
+    elif diff < 0:
+        extend = torch.cat([fim_pad for _ in range(-diff)])
+        suffix = torch.cat([suffix, extend])
+    
+    if mode == 'spm':
+        # Apply SPM
+        transfomed_example = torch.cat([
+            fim_prefix, fim_suffix, suffix, fim_middle, prefix, middle
+        ])
+    else:
+        # Apply PSM
+        transfomed_example = torch.cat([
+            fim_prefix, prefix, fim_suffix, suffix, fim_middle, middle
+        ])
+    
+    return transfomed_example
+
+
 class MambaDataset(Dataset):
     def __init__(
         self,
@@ -94,20 +126,6 @@ class MambaDataset(Dataset):
         labels = sample[1:self.context_len+1]
         return {'tokens': tokens, 'labels': labels}
 
-
-class MambaDatasetHF(Dataset):
-    def __init__(
-        self,
-        hf_dataset,
-        fim_prefix,
-        fim_middle,
-        fim_suffix,
-        fim_pad,
-        fim_rate=0.5,
-        mode='psm',
-        rng_seed=42
-    ):
-        pass
 
 class MambaSampler(Sampler):
     r"""Samples tokens randomly but `k` indices apart where `k` is generally the context length of the LLM.
