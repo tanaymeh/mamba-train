@@ -93,7 +93,21 @@ class MambaDataset(Dataset):
         tokens = sample[0:self.context_len]
         labels = sample[1:self.context_len+1]
         return {'tokens': tokens, 'labels': labels}
-    
+
+
+class MambaDatasetHF(Dataset):
+    def __init__(
+        self,
+        hf_dataset,
+        fim_prefix,
+        fim_middle,
+        fim_suffix,
+        fim_pad,
+        fim_rate=0.5,
+        mode='psm',
+        rng_seed=42
+    ):
+        pass
 
 class MambaSampler(Sampler):
     r"""Samples tokens randomly but `k` indices apart where `k` is generally the context length of the LLM.

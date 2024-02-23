@@ -1,7 +1,7 @@
+pyarrow
+pylance
+causal-conv1d>=1.1.0
+mamba-ssm
 numpy
 torch
 transformers
-accelerate
-evaluate
-causal-conv1d>=1.1.0
-mamba-ssm
