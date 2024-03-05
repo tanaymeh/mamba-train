@@ -6,11 +6,12 @@ from torch.utils.data import Dataset, Sampler
 
 import lance
 
+
 def apply_fim(sample, fim_prefix, fim_middle, fim_suffix, fim_pad, mode, np_rng):
     """
     Applies FIM transformation on one sample
     """
-    boundaries = sorted(np_rng.randint(low=0, high=len(sample)+1, size=2))
+    boundaries = sorted(np_rng.randint(low=0, high=len(sample) + 1, size=2))
 
     prefix = sample[: boundaries[0]]
     middle = sample[boundaries[0] : boundaries[1]]
@@ -23,18 +24,18 @@ def apply_fim(sample, fim_prefix, fim_middle, fim_suffix, fim_pad, mode, np_rng)
     elif diff < 0:
         extend = torch.cat([fim_pad for _ in range(-diff)])
         suffix = torch.cat([suffix, extend])
-    
-    if mode == 'spm':
+
+    if mode == "spm":
         # Apply SPM
-        transfomed_example = torch.cat([
-            fim_prefix, fim_suffix, suffix, fim_middle, prefix, middle
-        ])
+        transfomed_example = torch.cat(
+            [fim_prefix, fim_suffix, suffix, fim_middle, prefix, middle]
+        )
     else:
         # Apply PSM
-        transfomed_example = torch.cat([
-            fim_prefix, prefix, fim_suffix, suffix, fim_middle, middle
-        ])
-    
+        transfomed_example = torch.cat(
+            [fim_prefix, prefix, fim_suffix, suffix, fim_middle, middle]
+        )
+
     return transfomed_example
 
 
@@ -48,16 +49,16 @@ class MambaDataset(Dataset):
         fim_suffix,
         fim_pad,
         fim_rate=0.5,
-        mode='psm',
-        rng_seed=42
+        mode="psm",
+        rng_seed=42,
     ):
         # Load the lance dataset from the saved path
         self.ds = lance.dataset(dataset_path)
         self.context_len = context_len
-        
+
         # Doing this so the sampler never asks for an index at the end of text
         self.length = self.ds.count_rows() - context_len
-        
+
         self.np_rng = np.random.RandomState(seed=rng_seed)
 
         self.fim_prefix = torch.tensor([fim_prefix])
@@ -75,14 +76,14 @@ class MambaDataset(Dataset):
         Little utility function to get the data from lance
         """
         data = self.ds.take(idxs).to_pylist()
-        data = torch.tensor(list(map(lambda x: x['value'], data)))
+        data = torch.tensor(list(map(lambda x: x["value"], data)))
         return data
 
     def apply_fim(self, sample):
         """
         Applies FIM transformation on one sample
         """
-        boundaries = sorted(self.np_rng.randint(low=0, high=len(sample)+1, size=2))
+        boundaries = sorted(self.np_rng.randint(low=0, high=len(sample) + 1, size=2))
 
         prefix = sample[: boundaries[0]]
         middle = sample[boundaries[0] : boundaries[1]]
@@ -95,18 +96,32 @@ class MambaDataset(Dataset):
         elif diff < 0:
             extend = torch.cat([self.fim_pad for _ in range(-diff)])
             suffix = torch.cat([suffix, extend])
-        
-        if self.mode == 'spm':
+
+        if self.mode == "spm":
             # Apply SPM
-            transfomed_example = torch.cat([
-                self.fim_prefix, self.fim_suffix, suffix, self.fim_middle, prefix, middle
-            ])
+            transfomed_example = torch.cat(
+                [
+                    self.fim_prefix,
+                    self.fim_suffix,
+                    suffix,
+                    self.fim_middle,
+                    prefix,
+                    middle,
+                ]
+            )
         else:
             # Apply PSM
-            transfomed_example = torch.cat([
-                self.fim_prefix, prefix, self.fim_suffix, suffix, self.fim_middle, middle
-            ])
-        
+            transfomed_example = torch.cat(
+                [
+                    self.fim_prefix,
+                    prefix,
+                    self.fim_suffix,
+                    suffix,
+                    self.fim_middle,
+                    middle,
+                ]
+            )
+
         return transfomed_example
 
     def __getitem__(self, idx):
@@ -114,7 +129,7 @@ class MambaDataset(Dataset):
         Generate a list of indices starting from the current idx to idx+context_len+1
         with optional fim transformation
         """
-        current_window_idxs = np.arange(idx, idx+self.context_len+1)
+        current_window_idxs = np.arange(idx, idx + self.context_len + 1)
         sample = self.from_idxs(current_window_idxs)
 
         # Apply FIM transformation depending on the rate
@@ -122,9 +137,9 @@ class MambaDataset(Dataset):
             sample = self.apply_fim(sample)
 
         # +1 in labels because it is 1 step ahead of input tokens
-        tokens = sample[0:self.context_len]
-        labels = sample[1:self.context_len+1]
-        return {'tokens': tokens, 'labels': labels}
+        tokens = sample[0 : self.context_len]
+        labels = sample[1 : self.context_len + 1]
+        return {"tokens": tokens, "labels": labels}
 
 
 class MambaSampler(Sampler):
@@ -137,6 +152,7 @@ class MambaSampler(Sampler):
 
     def __init__(self, data_source, k=16):
         self.data_source = data_source
+        self.num_samples = len(self.data_source)
         self.available_indices = list(range(0, self.num_samples, k))
         random.shuffle(self.available_indices)
 
