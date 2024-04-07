@@ -1,5 +1,9 @@
 # mamba-train
 
+<a target="_blank" href="https://lightning.ai/tanaymeh/studios/train-mamba-for-code-infilling-with-lance">
+  <img src="https://pl-bolts-doc-images.s3.us-east-2.amazonaws.com/app-2/studio-badge.svg" alt="Open In Studio"/>
+</a>
+
 A single repo with all scripts and utils to train / fine-tune the Mamba model with or without Fill-in-Middle objective (for code infilling).
 
 ### Data
